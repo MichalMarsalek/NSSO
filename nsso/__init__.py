@@ -1,3 +1,8 @@
+"""
+Neat syntax for scipy.optimize
+Expression based definition of optimization problems.
+"""
+
 import numpy as np
 import scipy.optimize as so
 
@@ -13,8 +18,14 @@ FUNCTIONS = {
 }
 
 class Node:
+    """Abstract class representing a node a tree."""
     __array_priority__ = 100
     def collect_variables(self, output):
+        """
+        Recursively collects all variables occuring in the tree.
+        Args:
+            output (set): All variables found are added to this set.
+        """
         raise NotImplementedError("Abstract method")
 
     def __repr__(self):
@@ -24,8 +35,22 @@ class Node:
         raise NotImplementedError("Abstract method")
 
 class Expression(Node):
+    """
+    Tree representation of an expression.
+    This expression can be used as an objective function or in a constraint.
+    """
 
     def evaluate(self, values):
+        """
+        Performs a substitution of values into variables.
+
+        Args:
+            values Dict[Var, Array]: Values to be substituted.
+
+        Returns:
+            Array: Evaluated expression.
+
+        """
         raise NotImplementedError("Abstract method")
 
     def __add__(self, other):
@@ -65,15 +90,47 @@ class Expression(Node):
 
     @property
     def T(self):
+        """
+        Transposition.
+
+        Returns:
+            Transposed expression.
+        """
         return Func("T", self)
 
     def minimize(self, constraints=[], *args, **kwargs):
+        """
+        Problem minimization.
+
+        Args:
+            constraints(List[Constraint]): Constraints.
+
+        Returns:
+            Solution to the problem of minimizing the value of self, subject to give constraints.
+        """
         return Problem(self, constraints).minimize(*args, **kwargs)
 
     def maximize(self, constraints=[], *args, **kwargs):
+        """
+        Problem maximization.
+
+        Args:
+            constraints(List[Constraint]): Constraints.
+
+        Returns:
+            Solution to the problem of maximizing the value of self, subject to give constraints.
+        """
         return Problem(self, constraints).maximize(*args, **kwargs)
 
 class Func(Expression):
+    """
+    Function node.
+    This is any nonleaf node in the tree - including unary and binary operations.
+
+    Attributes:
+        func (Function): Function to be called.
+        args (List[Expression]): Arguments (child nodes).
+    """
     def __init__(self, func, *args):
         if isinstance(func, str):
             self.name = func
@@ -97,8 +154,13 @@ class Func(Expression):
         return f"{self.name}(" + ", ".join(str(x) for x in self.args) + ")"
 
 class Const(Expression):
+    """
+    Constant leaf node.
+
+    Attributes:
+        value (Array): Value of the node.
+    """
     def __init__(self, value):
-        self.sons = []
         self.value = value
 
     def collect_variables(self, output):
@@ -114,7 +176,22 @@ class Const(Expression):
         return f"{self.value}"
 
 class Var(Expression):
+    """
+    Variable leaf node.
+
+    Attributes:
+        guess (Array): Initial guess.
+
+    Properties:
+        flat_guess (Array): Initial guess converted to a column vector.
+        shape (Tuple[int, int]): Shape of variable.
+        size (int): Size of the variable.
+        is_row (bool): Indicator of row/column vector.
+    """
+
     def __init__(self, guess, name="noname"):
+        if isinstance(guess, int):
+            self.guess = np.zeros((guess,))
         if isinstance(guess, tuple):
             self.guess = np.zeros(guess)
         else:
@@ -132,7 +209,7 @@ class Var(Expression):
     @property
     def size(self):
         return self.guess.size
-    
+
     @property
     def is_row(self):
         return self.guess.ndim > 1 and self.shape[1] > 1
@@ -151,6 +228,17 @@ class Var(Expression):
         return id(self)
 
 class Constraint(Node):
+    """
+    Constraint node.
+
+    Attributes:
+        type (string): "<=", ">=" or "=="
+        left (Expression): Left size of the relation.
+        right (Expression): Right size of the relation.
+
+    Properties:
+        type2 (string): For normalized constraints maps "==" to "eq" and "<=" to "ineq"
+    """
     def __init__(self, type, left, right):
         self.type = type
         self.left = left if isinstance(left, Node) else Const(left)
@@ -170,20 +258,34 @@ class Constraint(Node):
         return {"==":"eq", "<=":"ineq"}[self.type]
 
     def normalized(self):
-        """Converts a constraint to Expression <= 0 or Expression == 0 form."""
+        """
+        Converts a constraint to Expression <= 0 or Expression == 0 form.
+        Returns:
+            Constraint: normalized constraint.
+        """
         if self.type == ">=":
             return Constraint("<=", self.right, self.left).normalized()
         return Constraint(self.type, self.left - self.right, Const(0))
 
-
-
 class Problem:
+    """
+    Description of the problem.
+
+    Attributes:
+        objective (Expression): Objective function.
+        constraitns (List[Constraint]): Constraints.
+        variables (List[Var]): Variables in the problem.
+        var_slices (Dict[Var, Slice]): Mapping from variables to slices in the combined vector.
+    """
     def __init__(self, objective, constraints=[]):
         self.objective = objective
         self.constraints = constraints
         self._collect_vars()
 
     def _collect_vars(self):
+        """
+        Collects all variables and allocates positions (slices) for them.
+        """
         res = set()
         self.objective.collect_variables(res)
         for c in self.constraints:
@@ -195,32 +297,44 @@ class Problem:
             self.var_slices[var] = slice(start, start + var.size)
             start += var.size
 
-    def transform(self, func):
+    def _transform(self, expr):
+        """
+        Transforms an expression to a function.
+        Args:
+            expr (Expression): Expression to be transformed.
+
+        Returns:
+            A function from variables to constants.
+        """
         def transformed(x):
             args = {}
             for var, slice in self.var_slices.items():
                 args[var] = x[slice].T if var.is_row else x[slice]
-            return func.evaluate(args)
+            return expr.evaluate(args)
         return transformed
 
     def minimize(self, *args, **kwargs):
+        """
+        Minimization of a problem.
+        Prepares data for scipy.optimize, runs it a then slices and maps the results back to the Variables.
+        """
         self._collect_vars()
-        objective = self.transform(self.objective)
+        objective = self._transform(self.objective)
         constraints = []
         for c in self.constraints:
             c = c.normalized()
-            constraints.append({"type": c.type2, "fun":self.transform(c.left)})
+            constraints.append({"type": c.type2, "fun":self._transform(c.left)})
         guess = np.concatenate([var.flat_guess for var in self.variables])
         optim = so.minimize(objective, guess, *args, constraints=constraints, **kwargs)
-        #print(optim)
         res = {}
         for var, slice in self.var_slices.items():
             res[var] = optim.x[slice].T if var.is_row else optim.x[slice]
         return res
 
-
-
     def maximize(self):
+        """
+        Maximization of a problem.
+        """
         return Problem(-self.objective, self.constraints).minimize()
 
 #other expression friendly functions
