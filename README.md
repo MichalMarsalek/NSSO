@@ -35,7 +35,7 @@ solution = objective.minimize(constraints)
 
 
 ## Expressions
-Common scalar/vector/matrix operations: `+`, `-`, `\*`, `/`, `@`, `\*\*`, `.T`, `[]` are available.
+Common scalar/vector/matrix operations: `+`, `-`, `*`, `/`, `@`, `**`, `.T`, `[]` are available.
 We can include the evaluation of any Python function using the `Func` object. For example
 ```
 objective = Func(sin, x[0])         # -> is evaluated as sin(x[0])
