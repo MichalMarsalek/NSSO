@@ -243,7 +243,7 @@ class Constraint(Node):
         right (Expression): Right size of the relation.
 
     Properties:
-        type2 (string): For normalized constraints maps "==" to "eq" and "<=" to "ineq"
+        type2 (string): For normalized constraints maps "==" to "eq" and ">=" to "ineq"
     """
     def __init__(self, type, left, right):
         self.type = type
@@ -261,7 +261,7 @@ class Constraint(Node):
 
     @property
     def type2(self):
-        return {"==":"eq", "<=":"ineq"}[self.type]
+        return {"==":"eq", ">=":"ineq"}[self.type]
 
     def normalized(self):
         """
@@ -269,8 +269,8 @@ class Constraint(Node):
         Returns:
             Constraint: normalized constraint.
         """
-        if self.type == ">=":
-            return Constraint("<=", self.right, self.left).normalized()
+        if self.type == "<=":
+            return Constraint(">=", self.right, self.left).normalized()
         return Constraint(self.type, self.left - self.right, Const(0))
 
 class Problem:
@@ -331,6 +331,7 @@ class Problem:
             c = c.normalized()
             constraints.append({"type": c.type2, "fun":self._transform(c.left)})
         guess = np.concatenate([var.flat_guess for var in self.variables])
+        print(repr(self.objective), repr(guess), repr(self.constraints[0].normalized()))
         optim = so.minimize(objective, guess, *args, constraints=constraints, **kwargs)
         res = {}
         for var, slice in self.var_slices.items():
