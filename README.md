@@ -19,7 +19,7 @@ Then, we can use these variables to form expressions. Such an expression can be 
 ```
 objective = v.T @ z
 ```
-Two expressions can be combined using "<=", ">=" or "==" to form a constraint:
+Two expressions can be combined using `<=`, `>=` or `==` to form a constraint:
 ```
 constraints = [x[0] >= v[1]]
 ```
@@ -35,8 +35,8 @@ solution = objective.minimize(constraints)
 
 
 
-##Expressions
-Common scalar/vector/matrix operations: "+", "-", "\*", "/", "@", "\*\*", ".T", "[]" are available.
+## Expressions
+Common scalar/vector/matrix operations: `+`, `-`, `*`, `/`, `@`, `**`, `.T`, `[]` are available.
 We can include the evaluation of any Python function using the `Func` object. For example
 ```
 objective = Func(sin, x[0])         # -> is evaluated as sin(x[0])
