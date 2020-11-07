@@ -198,7 +198,7 @@ class Var(Expression):
     def __init__(self, guess=1, name="noname"):
         if isinstance(guess, int):
             self.guess = np.zeros((guess,))
-        if isinstance(guess, tuple):
+        elif isinstance(guess, tuple):
             self.guess = np.zeros(guess)
         else:
             self.guess = np.array(guess)
