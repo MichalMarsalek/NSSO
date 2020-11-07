@@ -12,6 +12,7 @@ We start by defining all the variables we will be using:
 ```
 x = Var()                   # scalar variable
 v = Var(4)                  # column vector of size 4 variable
+w = Var((4,1))              # equivalent way. For now only (n,1) and (1,n) shapes are possible
 z = Var(numpy_array, "z")   # variable with an initial guess (which determines the size) and a string name used for printing
 ```
 Then, we can use these variables to form expressions. Such an expression can be used as an objective function:

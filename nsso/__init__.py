@@ -7,6 +7,8 @@ import numpy as np
 import scipy.optimize as so
 
 FUNCTIONS = {
+    "u+": (lambda x: +x),
+    "u-": (lambda x: -x),
     "+": (lambda x,y: x+y),
     "-": (lambda x,y: x-y),
     "*": (lambda x,y: x*y),
@@ -55,6 +57,10 @@ class Expression(Node):
 
     def __add__(self, other):
         return Func("+", self, other)
+    def __pos__(self):
+        return Func("u+", self)
+    def __neg__(self):
+        return Func("u-", self)
     def __radd__(self, other):
         return Func("+", other, self)
     def __sub__(self, other):
@@ -189,7 +195,7 @@ class Var(Expression):
         is_row (bool): Indicator of row/column vector.
     """
 
-    def __init__(self, guess, name="noname"):
+    def __init__(self, guess=1, name="noname"):
         if isinstance(guess, int):
             self.guess = np.zeros((guess,))
         if isinstance(guess, tuple):
