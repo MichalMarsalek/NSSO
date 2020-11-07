@@ -204,6 +204,10 @@ class Var(Expression):
             self.guess = np.array(guess)
         self.name = name
 
+    def __iter__(self):
+        for i in range(self.size):
+            yield self[i]
+
     @property
     def flat_guess(self):
         return np.resize(self.guess, (self.size,1))
@@ -331,7 +335,8 @@ class Problem:
             c = c.normalized()
             constraints.append({"type": c.type2, "fun":self._transform(c.left)})
         guess = np.concatenate([var.flat_guess for var in self.variables])
-        print(repr(self.objective), repr(guess), repr(self.constraints[0].normalized()))
+        #Debug print:
+        #print(repr(self.objective), repr(guess), repr(self.constraints[0].normalized()))
         optim = so.minimize(objective, guess, *args, constraints=constraints, **kwargs)
         res = {}
         for var, slice in self.var_slices.items():

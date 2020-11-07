@@ -37,6 +37,7 @@ solution = objective.minimize(constraints)
 
 ## Expressions
 Common scalar/vector/matrix operations: `+`, `-`, `*`, `/`, `@`, `**`, `.T`, `[]` are available.
+One can use `sum` function to sum all coordinates of a vector. As of now, this only works for summing coordinates of a variable and doesn't work for complex expressions. If you need to sum coordinates of an expression use the `Func` syntax (see below).
 We can include the evaluation of any Python function using the `Func` object. For example
 ```
 objective = Func(sin, x[0])         # -> is evaluated as sin(x[0])
